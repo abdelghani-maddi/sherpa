@@ -3,8 +3,8 @@ library(httr)
 library(jsonlite)
 library(readxl)
 library(tidyverse)
-## Données Revues
 
+## Données Revues : fichier avec 253222 lignes contenant des ISSN/EISSN de revues extrait à partir de OpenAlex
 journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
 
 # test <- journals_openalex$issn[1:100]
@@ -15,7 +15,7 @@ data_list <- list()
 # Créer un vecteur pour stocker les ISSN ayant des données valides.
 valid_issn <- c()
 
-# Spécifiez le point de départ (l'index à partir duquel vous souhaitez reprendre en cas d'interruption)
+# Spécification du point de départ (l'index à partir duquel la requête reprendra en cas d'interruption)
 point_depart <- 1
 
 # Boucle pour extraire les données
@@ -47,7 +47,7 @@ for (i in point_depart:length(journals_openalex$issn)) {
   point_depart <- i
 }
 
-# Sauvegarder data_list dans un fichier RDS
+# Sauvegarder data_list dans un fichier RDS : Le fichier extrait de Sherpa contient 43406 revues.
 saveRDS(data_list, file = "data_list.rds")
 
 # Charger data_list depuis le fichier RDS
