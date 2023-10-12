@@ -4,6 +4,7 @@ library(httr)
 library(jsonlite)
 library(readxl)
 library(tidyverse)
+library(questionr)
 
 ## Données Revues : fichier avec 253222 lignes contenant des ISSN/EISSN de revues extrait à partir de OpenAlex. Soit 186347 supports (y compris revues) distincts.
 journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
@@ -115,9 +116,8 @@ df <- data.frame(
 )
 
 
-
-
-
+# explo types
+type <- freq(df$relationship_type)
 
 
 
