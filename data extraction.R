@@ -4,7 +4,7 @@ library(jsonlite)
 library(readxl)
 library(tidyverse)
 
-## Données Revues : fichier avec 253222 lignes contenant des ISSN/EISSN de revues extrait à partir de OpenAlex
+## Données Revues : fichier avec 253222 lignes contenant des ISSN/EISSN de revues extrait à partir de OpenAlex. Soit 186347 supports (y compris revues) distincts.
 journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
 
 # test <- journals_openalex$issn[1:100]
