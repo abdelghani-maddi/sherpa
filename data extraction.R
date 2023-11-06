@@ -53,7 +53,10 @@ for (i in point_depart:length(journals_openalex$issn)) {
 # Sauvegarder data_list dans un fichier RDS : Le fichier extrait de Sherpa contient 43406 revues.
 saveRDS(data_list, file = "data_list.rds")
 
+##########################################
 # Charger data_list depuis le fichier RDS
+##########################################
+
 revues_sherpa <- readRDS("data_list.rds")
 
 
