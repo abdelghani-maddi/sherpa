@@ -55,6 +55,14 @@ saveRDS(data_list, file = "data_list.rds")
 
 
 
+##############
+# Extraire les données sans passer par OpenAlex, en utilisant les filtres de l'API
+##############
 
+lien <- "https://v2.sherpa.ac.uk/cgi/retrieve?item-type=publication&api-key=3F5913F6-677E-11EE-8559-EAD6AA1EFE05&format=Json&filter=[[%22date_modified%22,%22gte%22,%222020-09-10T14:15:48Z%22]]"
+# Effectuer la requête GET pour récupérer les données JSON.
+response <- GET(lien)
 
+# Parser les données JSON.
+json_data <- fromJSON(content(response, "text", encoding = "ISO-8859-1"))
 

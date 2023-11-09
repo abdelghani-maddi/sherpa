@@ -26,6 +26,9 @@ embargo_amount_concatenated <- character(43406)
 listed_in_doaj_phrases_concatenated <- character(43406)
 relationship_type_concatenated <- character(43406)
 publisher_country_concatenated <- character(43406)
+copyright_owner_phrases_concatenated <- character(43406)
+article_version_concatenated <- character(43406)
+license_concatenated <- character(43406)
 
 # Boucle pour extraire et concaténer les valeurs
 for (i in 1:43406) {
@@ -62,6 +65,19 @@ for (i in 1:43406) {
   # Champ "publisher_country"
   publisher_country_values <- item[["publishers"]][[1]][["publisher"]][["country"]]
   publisher_country_concatenated[i] <- if (!is.null(publisher_country_values)) paste(publisher_country_values, collapse = " - ") else NA
+  
+  # permitted oa
+  permitted_oa_values <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]]
+  article_version_concatenated[i] <- paste(permitted_oa_values$article_version, collapse = " - ")
+  
+  # Licence
+  license <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["license"]]
+  license_concatenated[i] <- if (!is.null(license)) paste(license, collapse = " - ") else NA
+
+  # copyright_owner_phrases
+  copyright_owner_phrases <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["copyright_owner_phrases"]]
+  copyright_owner_phrases_concatenated[i] <- if (!is.null(copyright_owner_phrases)) paste(copyright_owner_phrases, collapse = " - ") else NA
+  
 }
 
 # Créer un dataframe avec les valeurs concaténées
@@ -73,10 +89,75 @@ df <- data.frame(
   embargo_amount = embargo_amount_concatenated,
   listed_in_doaj_phrases = listed_in_doaj_phrases_concatenated,
   relationship_type = relationship_type_concatenated,
-  publisher_country = publisher_country_concatenated
+  publisher_country = publisher_country_concatenated,
+  copyright_owner_phrases = copyright_owner_phrases_concatenated,
+  article_version = article_version_concatenated,
+  license = license_concatenated
 )
 
 
 # explo types
 type <- freq(df$relationship_type)
+
+
+
+
+
+# Fonction pour extraire les informations de manière récursive
+extract_info_recursive <- function(item, parent_key = "") {
+  items <- list()
+  
+  for (key in names(item)) {
+    new_key <- ifelse(parent_key == "", key, paste(parent_key, key, sep = "."))
+    
+    if (is.list(item[[key]])) {
+      sub_items <- extract_info_recursive(item[[key]], new_key)
+      items <- c(items, sub_items)
+    } else {
+      items[[new_key]] <- item[[key]]
+    }
+  }
+  
+  return(items)
+}
+
+# Créer un dataframe vide
+df <- data.frame()
+
+# Boucle pour explorer tous les éléments de la liste
+for (i in 1:length(revues_sherpa)) {
+  item <- revues_sherpa[[i]][["items"]]
+  
+  # Extraire les informations de manière récursive
+  row_data <- extract_info_recursive(item)
+  
+  # Ajouter les données de la ligne au dataframe
+  df <- bind_rows(df, as.data.frame(row_data))
+}
+
+# Remplacer les valeurs NA par des valeurs vides
+df[is.na(df)] <- ""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
