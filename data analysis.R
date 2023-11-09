@@ -28,7 +28,10 @@ relationship_type_concatenated <- character(43406)
 publisher_country_concatenated <- character(43406)
 copyright_owner_phrases_concatenated <- character(43406)
 article_version_concatenated <- character(43406)
+article_version_concatenated2 <- character(43406)
 license_concatenated <- character(43406)
+location_phrases_concatenated <- character(43406)
+named_repository_concatenated <- character(43406)
 
 # Boucle pour extraire et concaténer les valeurs
 for (i in 1:43406) {
@@ -69,6 +72,10 @@ for (i in 1:43406) {
   # permitted oa
   permitted_oa_values <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]]
   article_version_concatenated[i] <- paste(permitted_oa_values$article_version, collapse = " - ")
+
+  # permitted oa 2 
+  permitted_oa_values2 <- item[["publisher_policy"]][[1]][["permitted_oa"]][[2]]
+  article_version_concatenated2[i] <- paste(permitted_oa_values2$article_version, collapse = " - ")
   
   # Licence
   license <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["license"]]
@@ -77,6 +84,14 @@ for (i in 1:43406) {
   # copyright_owner_phrases
   copyright_owner_phrases <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["copyright_owner_phrases"]]
   copyright_owner_phrases_concatenated[i] <- if (!is.null(copyright_owner_phrases)) paste(copyright_owner_phrases, collapse = " - ") else NA
+  
+  # location_phrases
+  location_phrases <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["location"]][["location_phrases"]][[1]]
+  location_phrases_concatenated[i] <- if (!is.null(location_phrases)) paste(location_phrases, collapse = " - ") else NA
+  
+  # Licence
+  named_repository <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["location"]][["named_repository"]]
+  named_repository_concatenated[i] <- if (!is.null(named_repository)) paste(named_repository, collapse = " - ") else NA
   
 }
 
@@ -92,7 +107,10 @@ df <- data.frame(
   publisher_country = publisher_country_concatenated,
   copyright_owner_phrases = copyright_owner_phrases_concatenated,
   article_version = article_version_concatenated,
-  license = license_concatenated
+  article_version2 = article_version_concatenated2,
+  license = license_concatenated,
+  location_phrases = location_phrases_concatenated,
+  named_repository = named_repository_concatenated
 )
 
 
