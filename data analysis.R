@@ -8,7 +8,7 @@ library(tidyverse)
 library(questionr)  
 
 ## Données Revues : fichier avec 253222 lignes contenant des ISSN/EISSN de revues extrait à partir de OpenAlex. Soit 186347 supports (y compris revues) distincts.
-journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
+#  journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
 
 ##########################################
 # Charger data_list depuis le fichier RDS
@@ -28,7 +28,6 @@ relationship_type_concatenated <- character(43406)
 publisher_country_concatenated <- character(43406)
 copyright_owner_phrases_concatenated <- character(43406)
 article_version_concatenated <- character(43406)
-article_version_concatenated2 <- character(43406)
 license_concatenated <- character(43406)
 location_phrases_concatenated <- character(43406)
 named_repository_concatenated <- character(43406)
@@ -37,9 +36,16 @@ named_repository_concatenated <- character(43406)
 for (i in 1:43406) {
   item <- revues_sherpa[[i]][["items"]]
   
-  # Champ "additional_oa_fee"
-  additional_oa_fee_values <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["additional_oa_fee"]]
-  additional_oa_fee_concatenated[i] <- if (!is.null(additional_oa_fee_values)) paste(additional_oa_fee_values, collapse = " - ") else NA
+  # additional_oa_fee
+  additional_oa_fee_values <- item[["publisher_policy"]][[1]][["permitted_oa"]]
+  
+  if (length(additional_oa_fee_values) > 0) {
+    concatenated_values <- sapply(additional_oa_fee_values, function(x) paste(x[["additional_oa_fee"]], collapse = " - "))
+    additional_oa_fee_concatenated[i] <- paste(concatenated_values, collapse = " | ")
+  } else {
+    additional_oa_fee_concatenated[i] <- NA
+  }
+  
   
   # Champ "listed_in_doaj"
   listed_in_doaj_values <- item[["listed_in_doaj"]]
@@ -69,13 +75,17 @@ for (i in 1:43406) {
   publisher_country_values <- item[["publishers"]][[1]][["publisher"]][["country"]]
   publisher_country_concatenated[i] <- if (!is.null(publisher_country_values)) paste(publisher_country_values, collapse = " - ") else NA
   
+  
   # permitted oa
-  permitted_oa_values <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]]
-  article_version_concatenated[i] <- paste(permitted_oa_values$article_version, collapse = " - ")
-
-  # permitted oa 2 
-  permitted_oa_values2 <- item[["publisher_policy"]][[1]][["permitted_oa"]][[2]]
-  article_version_concatenated2[i] <- paste(permitted_oa_values2$article_version, collapse = " - ")
+  permitted_oa_values <- item[["publisher_policy"]][[1]][["permitted_oa"]]
+  
+  if (length(permitted_oa_values) > 0) {
+    concatenated_values <- sapply(permitted_oa_values, function(x) paste(x$article_version, collapse = " - "))
+    article_version_concatenated[i] <- paste(concatenated_values, collapse = " | ")
+  } else {
+    article_version_concatenated[i] <- NA
+  }
+  
   
   # Licence
   license <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["license"]]
@@ -107,7 +117,6 @@ df <- data.frame(
   publisher_country = publisher_country_concatenated,
   copyright_owner_phrases = copyright_owner_phrases_concatenated,
   article_version = article_version_concatenated,
-  article_version2 = article_version_concatenated2,
   license = license_concatenated,
   location_phrases = location_phrases_concatenated,
   named_repository = named_repository_concatenated
@@ -118,55 +127,72 @@ df <- data.frame(
 type <- freq(df$relationship_type)
 
 
-
-
-
-# Fonction pour extraire les informations de manière récursive
-extract_info_recursive <- function(item, parent_key = "") {
-  items <- list()
-  
-  for (key in names(item)) {
-    new_key <- ifelse(parent_key == "", key, paste(parent_key, key, sep = "."))
-    
-    if (is.list(item[[key]])) {
-      sub_items <- extract_info_recursive(item[[key]], new_key)
-      items <- c(items, sub_items)
+# Fonction pour concaténer les valeurs d'un champ
+concatenate_field <- function(item, field_name) {
+  if (field_name == "listed_in_doaj") {
+    field_values <- item[[field_name]]
+  } else if (field_name == "issn") {
+    field_values <- item[["issns"]][[1]][[field_name]]
+  } else if (field_name == "country") {  # Ajustement ici
+    field_values <- item[["publishers"]][[1]][["publisher"]]
+    if (!is.null(field_values) && !is.null(field_values[[field_name]])) {
+      return(paste(field_values[[field_name]], collapse = " - "))
     } else {
-      items[[new_key]] <- item[[key]]
+      return(NA)
     }
+  } else if (field_name %in% c("relationship_type")) {
+    field_values <- item[["publishers"]][[1]][[field_name]]
+  } else {
+    field_values <- item[["publisher_policy"]][[1]][["permitted_oa"]]
   }
   
-  return(items)
+  if (!is.null(field_values)) {
+    if (field_name %in% c("listed_in_doaj", "issn", "relationship_type")) {
+      return(paste(field_values, collapse = " - "))
+    } else {
+      concatenated_values <- sapply(field_values, function(x) {
+        if (!is.null(x[[field_name]])) {
+          return(x[[field_name]])
+        } else {
+          return(NA)
+        }
+      })
+      return(paste(concatenated_values, collapse = " | "))
+    }
+  } else {
+    return(NA)
+  }
 }
 
-# Créer un dataframe vide
-df <- data.frame()
 
-# Boucle pour explorer tous les éléments de la liste
-for (i in 1:length(revues_sherpa)) {
-  item <- revues_sherpa[[i]][["items"]]
+# Créer des vecteurs pour stocker les valeurs concaténées
+fields <- c(
+  "additional_oa_fee",
+  "listed_in_doaj",
+  "issn",
+  "license",
+  "location",
+  "copyright_owner",
+  "article_version",
+  "embargo",
+  "relationship_type",
+  "country"
+)
+
+concatenated_data <- lapply(fields, function(field) {
+  concatenated_values <- character(43406)
   
-  # Extraire les informations de manière récursive
-  row_data <- extract_info_recursive(item)
+  for (i in 1:43406) {
+    item <- revues_sherpa[[i]][["items"]]
+    
+    concatenated_values[i] <- concatenate_field(item, field)
+  }
   
-  # Ajouter les données de la ligne au dataframe
-  df <- bind_rows(df, as.data.frame(row_data))
-}
+  return(concatenated_values)
+})
 
-# Remplacer les valeurs NA par des valeurs vides
-df[is.na(df)] <- ""
-
-
-
-
-
-
-
-
-
-
-
-
+# Créer un dataframe avec les valeurs concaténées
+df <- data.frame(setNames(concatenated_data, fields))
 
 
 
