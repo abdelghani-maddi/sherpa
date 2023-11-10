@@ -126,14 +126,13 @@ df <- data.frame(
 # explo types
 type <- freq(df$relationship_type)
 
-
 # Fonction pour concaténer les valeurs d'un champ
 concatenate_field <- function(item, field_name) {
   if (field_name == "listed_in_doaj") {
     field_values <- item[[field_name]]
   } else if (field_name == "issn") {
     field_values <- item[["issns"]][[1]][[field_name]]
-  } else if (field_name == "country") {  # Ajustement ici
+  } else if (field_name == "country") {
     field_values <- item[["publishers"]][[1]][["publisher"]]
     if (!is.null(field_values) && !is.null(field_values[[field_name]])) {
       return(paste(field_values[[field_name]], collapse = " - "))
@@ -144,6 +143,22 @@ concatenate_field <- function(item, field_name) {
     field_values <- item[["publishers"]][[1]][[field_name]]
   } else {
     field_values <- item[["publisher_policy"]][[1]][["permitted_oa"]]
+    
+    if (field_name == "named_repository") {
+      if (!is.null(field_values)) {
+        concatenated_values <- sapply(field_values, function(x) {
+          location_values <- x[["location"]]
+          if (!is.null(location_values) && !is.null(location_values[["named_repository"]])) {
+            return(paste(location_values[["named_repository"]], collapse = " - "))
+          } else {
+            return(NA)
+          }
+        })
+        return(paste(concatenated_values, collapse = " | "))
+      } else {
+        return(NA)
+      }
+    }
   }
   
   if (!is.null(field_values)) {
@@ -164,7 +179,6 @@ concatenate_field <- function(item, field_name) {
   }
 }
 
-
 # Créer des vecteurs pour stocker les valeurs concaténées
 fields <- c(
   "additional_oa_fee",
@@ -172,6 +186,7 @@ fields <- c(
   "issn",
   "license",
   "location",
+  "named_repository",
   "copyright_owner",
   "article_version",
   "embargo",
