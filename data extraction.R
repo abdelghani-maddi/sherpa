@@ -105,10 +105,10 @@ for (i in point_depart:70000) {
       data_list <- append(data_list, list(json_data))
       valid_issn <- c(valid_issn, issn)
     } else {
-      cat(paste("Les données sont vides pour id", id, "\n"))
+      cat(paste("Les données sont vides pour l'id", id, "\n"))
     }
   }, error = function(e) {
-    cat("Erreur lors de la requête pour id", id, ":", conditionMessage(e), "\n")
+    cat("Erreur lors de la requête pour l'id", id, ":", conditionMessage(e), "\n")
   })
   
   # Sauvegarder le point de départ actuel à chaque itération (l'API rejette la requête et cela permet de relancer autormatiquement à chaque fois)
