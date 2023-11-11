@@ -63,7 +63,7 @@ for (i in point_depart:length(doaj_e_issn$issn)) {
 }
 
 # Sauvegarder data_list dans un fichier RDS : Le fichier extrait de Sherpa contient 43406 revues.
-# saveRDS(data_list, file = "data_list.rds") pour les données OpenAlex
+# saveRDS(data_list, file = "data_list_openalex.rds") pour les données OpenAlex
 
 saveRDS(data_list, file = "data_list_doaj.rds") # pour les données DOAJ
 
