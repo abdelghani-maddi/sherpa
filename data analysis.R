@@ -8,123 +8,22 @@ library(tidyverse)
 library(questionr)  
 
 ## Données Revues : fichier avec 253222 lignes contenant des ISSN/EISSN de revues extrait à partir de OpenAlex. Soit 186347 supports (y compris revues) distincts.
-#  journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
+journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
+
+##
+journals_openalex <- read_excel("D:/bdd pubpeer/journals_openalex.xlsx")
+journals_doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
+##
+
 
 ##########################################
 # Charger data_list depuis le fichier RDS
 ##########################################
 
-revues_sherpa <- readRDS("data_list.rds")
+revues_sherpa_openalex <- readRDS("data_list_openalex.rds")
+revues_sherpa_doaj <- readRDS("data_list_doaj.rds")
+revues_sherpa_all_sherpa <- readRDS("data_list_all_sherpa.rds")
 
-
-# Créer des vecteurs pour stocker les valeurs concaténées
-additional_oa_fee_concatenated <- character(43406)
-listed_in_doaj_concatenated <- character(43406)
-issn_concatenated <- character(43406)
-publication_count_concatenated <- character(43406)
-embargo_amount_concatenated <- character(43406)
-listed_in_doaj_phrases_concatenated <- character(43406)
-relationship_type_concatenated <- character(43406)
-publisher_country_concatenated <- character(43406)
-copyright_owner_phrases_concatenated <- character(43406)
-article_version_concatenated <- character(43406)
-license_concatenated <- character(43406)
-location_phrases_concatenated <- character(43406)
-named_repository_concatenated <- character(43406)
-
-# Boucle pour extraire et concaténer les valeurs
-for (i in 1:43406) {
-  item <- revues_sherpa[[i]][["items"]]
-  
-  # additional_oa_fee
-  additional_oa_fee_values <- item[["publisher_policy"]][[1]][["permitted_oa"]]
-  
-  if (length(additional_oa_fee_values) > 0) {
-    concatenated_values <- sapply(additional_oa_fee_values, function(x) paste(x[["additional_oa_fee"]], collapse = " - "))
-    additional_oa_fee_concatenated[i] <- paste(concatenated_values, collapse = " | ")
-  } else {
-    additional_oa_fee_concatenated[i] <- NA
-  }
-  
-  
-  # Champ "listed_in_doaj"
-  listed_in_doaj_values <- item[["listed_in_doaj"]]
-  listed_in_doaj_concatenated[i] <- if (!is.null(listed_in_doaj_values)) paste(listed_in_doaj_values, collapse = " - ") else NA
-  
-  # Champ "issn"
-  issn_values <- item[["issns"]][[1]][["issn"]]
-  issn_concatenated[i] <- if (!is.null(issn_values)) paste(issn_values, collapse = " - ") else NA
-  
-  # Champ "publication_count"
-  publication_count_values <- item[["publisher_policy"]][[1]][["publication_count"]]
-  publication_count_concatenated[i] <- if (!is.null(publication_count_values)) paste(publication_count_values, collapse = " - ") else NA
-  
-  # Champ "embargo_amount"
-  embargo_amount_values <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["embargo"]][["amount"]]
-  embargo_amount_concatenated[i] <- if (!is.null(embargo_amount_values)) paste(embargo_amount_values, collapse = " - ") else NA
-  
-  # Champ "listed_in_doaj_phrases"
-  listed_in_doaj_phrases_values <- item[["listed_in_doaj_phrases"]][[1]][["value"]]
-  listed_in_doaj_phrases_concatenated[i] <- if (!is.null(listed_in_doaj_phrases_values)) paste(listed_in_doaj_phrases_values, collapse = " - ") else NA
-  
-  # Champ "relationship_type"
-  relationship_type_values <- item[["publishers"]][[1]][["relationship_type"]]
-  relationship_type_concatenated[i] <- if (!is.null(relationship_type_values)) paste(relationship_type_values, collapse = " - ") else NA
-  
-  # Champ "publisher_country"
-  publisher_country_values <- item[["publishers"]][[1]][["publisher"]][["country"]]
-  publisher_country_concatenated[i] <- if (!is.null(publisher_country_values)) paste(publisher_country_values, collapse = " - ") else NA
-  
-  
-  # permitted oa
-  permitted_oa_values <- item[["publisher_policy"]][[1]][["permitted_oa"]]
-  
-  if (length(permitted_oa_values) > 0) {
-    concatenated_values <- sapply(permitted_oa_values, function(x) paste(x$article_version, collapse = " - "))
-    article_version_concatenated[i] <- paste(concatenated_values, collapse = " | ")
-  } else {
-    article_version_concatenated[i] <- NA
-  }
-  
-  
-  # Licence
-  license <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["license"]]
-  license_concatenated[i] <- if (!is.null(license)) paste(license, collapse = " - ") else NA
-
-  # copyright_owner_phrases
-  copyright_owner_phrases <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["copyright_owner_phrases"]]
-  copyright_owner_phrases_concatenated[i] <- if (!is.null(copyright_owner_phrases)) paste(copyright_owner_phrases, collapse = " - ") else NA
-  
-  # location_phrases
-  location_phrases <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["location"]][["location_phrases"]][[1]]
-  location_phrases_concatenated[i] <- if (!is.null(location_phrases)) paste(location_phrases, collapse = " - ") else NA
-  
-  # Licence
-  named_repository <- item[["publisher_policy"]][[1]][["permitted_oa"]][[1]][["location"]][["named_repository"]]
-  named_repository_concatenated[i] <- if (!is.null(named_repository)) paste(named_repository, collapse = " - ") else NA
-  
-}
-
-# Créer un dataframe avec les valeurs concaténées
-df <- data.frame(
-  additional_oa_fee = additional_oa_fee_concatenated,
-  listed_in_doaj = listed_in_doaj_concatenated,
-  issn = issn_concatenated,
-  publication_count = publication_count_concatenated,
-  embargo_amount = embargo_amount_concatenated,
-  listed_in_doaj_phrases = listed_in_doaj_phrases_concatenated,
-  relationship_type = relationship_type_concatenated,
-  publisher_country = publisher_country_concatenated,
-  copyright_owner_phrases = copyright_owner_phrases_concatenated,
-  article_version = article_version_concatenated,
-  license = license_concatenated,
-  location_phrases = location_phrases_concatenated,
-  named_repository = named_repository_concatenated
-)
-
-
-# explo types
-type <- freq(df$relationship_type)
 
 # Fonction pour concaténer les valeurs d'un champ
 concatenate_field <- function(item, field_name) {
@@ -194,11 +93,16 @@ fields <- c(
   "country"
 )
 
+
+#############################################
+############## OpenAlex data ################   
+#############################################
+
 concatenated_data <- lapply(fields, function(field) {
   concatenated_values <- character(43406)
   
   for (i in 1:43406) {
-    item <- revues_sherpa[[i]][["items"]]
+    item <- revues_sherpa_openalex[[i]][["items"]]
     
     concatenated_values[i] <- concatenate_field(item, field)
   }
@@ -207,16 +111,105 @@ concatenated_data <- lapply(fields, function(field) {
 })
 
 # Créer un dataframe avec les valeurs concaténées
-df <- data.frame(setNames(concatenated_data, fields))
+df_openalex <- data.frame(setNames(concatenated_data, fields))
+# Diviser la colonne "issn" en deux parties au niveau du "-"
+df_openalex <- separate(df_openalex, issn, into = c("issn1", "issn2"), sep = " - ") %>%
+  mutate(id_openalex = 1:length(df_openalex$additional_oa_fee))
+
+
+#############################################
+################ doaj data ##################   
+#############################################
+
+concatenated_data <- lapply(fields, function(field) {
+  concatenated_values <- character(9838)
+  
+  for (i in 1:9838) {
+    item <- revues_sherpa_doaj[[i]][["items"]]
+    
+    concatenated_values[i] <- concatenate_field(item, field)
+  }
+  
+  return(concatenated_values)
+})
+
+# Créer un dataframe avec les valeurs concaténées
+df_doaj <- data.frame(setNames(concatenated_data, fields))
+# Diviser la colonne "issn" en deux parties au niveau du "-"
+df_doaj <- separate(df_doaj, issn, into = c("issn1", "issn2"), sep = " - ") %>%
+  mutate(id_doaj = 1:length(df_doaj$additional_oa_fee))
 
 
 
+#############################################
+############# all sherpa data ###############   
+#############################################
+
+concatenated_data <- lapply(fields, function(field) {
+  concatenated_values <- character(27572)
+  
+  for (i in 1:27572) {
+    item <- revues_sherpa_all_sherpa[[i]][["items"]]
+    
+    concatenated_values[i] <- concatenate_field(item, field)
+  }
+  
+  return(concatenated_values)
+})
+
+# Créer un dataframe avec les valeurs concaténées
+df_all_sherpa <- data.frame(setNames(concatenated_data, fields))
+# Diviser la colonne "issn" en deux parties au niveau du "-"
+df_all_sherpa <- separate(df_all_sherpa, issn, into = c("issn1", "issn2"), sep = " - ") %>%
+  mutate(all_sherpa = 1:length(df_all_sherpa$additional_oa_fee))
+
+
+##########################
+# Les ISSN DES TROIS BASES
+##########################
+
+# DOAJ
+doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
+doaj_e_issn <- data.frame(c(doaj$Journal.ISSN..print.version., doaj$Journal.EISSN..online.version.))
+names(doaj_e_issn) <- "issn"
+doaj_e_issn <- doaj_e_issn %>%
+  filter(issn != "") %>%
+  unique() %>% 
+  left_join(., df_doaj %>% select(issn1, id_doaj), by = c("issn" = "issn1")) %>%
+  left_join(., df_doaj %>% select(issn2, id_doaj), by = c("issn" = "issn2")) %>%
+  mutate(id_doaj_sherpa = coalesce(id_doaj.x, id_doaj.y)) %>%
+  select(-id_doaj.x, -id_doaj.y)
+
+
+# OpenAlex
+openalex_e_issn <- journals_openalex %>%
+  select(issn) %>%
+  unique() %>%
+  left_join(., df_openalex %>% select(issn1, id_openalex), by = c("issn" = "issn1")) %>%
+  left_join(., df_openalex %>% select(issn2, id_openalex), by = c("issn" = "issn2")) %>%
+  mutate(id_openalex_sherpa = coalesce(id_openalex.x, id_openalex.y)) %>%
+  select(-id_openalex.x, -id_openalex.y)
+
+
+# Sherpa Romeo
+sherpa_e_issn <- df_all_sherpa %>%
+  select(issn1, issn2)
+sherpa_e_issn <- data.frame(c(sherpa_e_issn$issn1, sherpa_e_issn$issn2)) %>%
+  unique()
+names(sherpa_e_issn) <- "issn"
+
+sherpa_e_issn <- sherpa_e_issn %>%
+  left_join(., df_all_sherpa %>% select(issn1, all_sherpa), by = c("issn" = "issn1")) %>%
+  left_join(., df_all_sherpa %>% select(issn2, all_sherpa), by = c("issn" = "issn2")) %>%
+  mutate(id_sherpa_sherpa = coalesce(all_sherpa.x, all_sherpa.y)) %>%
+  select(-all_sherpa.x, -all_sherpa.y)
 
 
 
-
-
-
-
+# Utiliser full_join pour obtenir toutes les lignes
+result_full_outer <- full_join(doaj_e_issn, openalex_e_issn, by = "issn") %>%
+  full_join(., sherpa_e_issn, by = "issn") %>%
+  select(-issn) %>%
+  unique
 
 
