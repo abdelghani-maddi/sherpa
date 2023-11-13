@@ -247,15 +247,31 @@ match_bdd$id_openalex_result <- ifelse(!is.na(matching_indices), journals_openal
 #####################################################################################
 #####################################################################################
 match_bdd2 <- match_bdd %>%
-  select(starts_with("id_")) %>%
+  select("issn", starts_with("id_")) %>%
   unique()
+
+
+
+filtered_match_bdd2 <- match_bdd2 %>%
+  distinct(id_doaj_result, id_sherpa_result, id_openalex_result, .keep_all = TRUE)
+
+filtered_match_bdd2 <- match_bdd2 %>%
+  gather(column, value, id_doaj_result:id_openalex_result) %>%
+  group_by(column, value) %>%
+  filter(all(is.na(value)) | all(is.na(select(., -column)))) %>%
+  spread(column, value)
+
 
 # Transformer en 0/1
 match_bdd2$id_doaj_result <- ifelse(!is.na(match_bdd2$id_doaj_result), 1, 0)
 match_bdd2$id_openalex_result <- ifelse(!is.na(match_bdd2$id_openalex_result), 1, 0)
 match_bdd2$id_sherpa_result <- ifelse(!is.na(match_bdd2$id_sherpa_result), 1, 0)
 
-names(match_bdd2) <- c("DOAJ", "Sherpa Romeo", "OpenAlex")
+names(match_bdd2) <- c("issn","DOAJ", "Sherpa Romeo", "OpenAlex")
+
+# Utiliser la fonction table pour compter le nombre de lignes par issn
+count_by_issn <- table(match_bdd2$issn) %>%
+  data.frame()
 
 # install.packages("UpSetR")
 library(UpSetR)
@@ -263,7 +279,7 @@ library(grid)
 
 
 # Créer le graphique UpSet
-upset_plot <- upset(match_bdd2, order.by = "freq", nsets = 3, matrix.color = "#DC267F", 
+upset(match_bdd2, order.by = "freq", nsets = 3, matrix.color = "#DC267F", 
       main.bar.color = "#648FFF", sets.bar.color = "#FE6100",
       point.size = 6,
       text.scale = 2,  # Ajuster la taille des chiffres
@@ -282,7 +298,5 @@ for (i in seq_along(upset_plot$bar.down$vps)) {
   )
 }
 
-# Afficher le graphique
-print(upset_plot)
 
 
