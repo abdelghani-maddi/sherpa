@@ -255,7 +255,7 @@ match_bdd2$id_doaj_result <- ifelse(!is.na(match_bdd2$id_doaj_result), 1, 0)
 match_bdd2$id_openalex_result <- ifelse(!is.na(match_bdd2$id_openalex_result), 1, 0)
 match_bdd2$id_sherpa_result <- ifelse(!is.na(match_bdd2$id_sherpa_result), 1, 0)
 
-names(match_bdd2) <- c("DOAJ", "OpenAlex", "Sherpa Romeo")
+names(match_bdd2) <- c("DOAJ", "Sherpa Romeo", "OpenAlex")
 
 # install.packages("UpSetR")
 library(UpSetR)
