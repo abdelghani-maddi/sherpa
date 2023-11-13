@@ -15,7 +15,7 @@ journals_openalex <- read_excel("D:/bdd pubpeer/journals_openalex.xlsx")
 journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
 
 journals_doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
-journals_doaj <- read.csv("~/Documents/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
+journals_doaj <- read.csv("~/Documents/sherpa_romeo_juliette/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
 
 ##
 
@@ -203,29 +203,86 @@ sherpa_e_issn <- sherpa_e_issn %>% mutate(issn_sherpa = issn)
 
 # Utiliser full_join pour obtenir toutes les lignes
 match_bdd <- full_join(doaj_e_issn, openalex_e_issn, by = "issn") %>%
-  full_join(., sherpa_e_issn, by = "issn") 
+  full_join(., sherpa_e_issn, by = "issn") %>%
+  unique()
+
+#####################################################################################
+#####################################################################################
+# Trouver les indices des correspondances pour issn1 et issn2
+matching_indices_issn1 <- match(match_bdd$issn_doaj, doaj$Journal.ISSN..print.version.)
+matching_indices_issn2 <- match(match_bdd$issn_doaj, doaj$Journal.EISSN..online.version.)
+
+# Combiner les résultats en utilisant l'opérateur |
+matching_indices <- ifelse(!is.na(matching_indices_issn1), matching_indices_issn1, matching_indices_issn2)
+
+# Ajouter une colonne id_openalex_result à match_bdd
+match_bdd$id_doaj_result <- ifelse(!is.na(matching_indices), doaj$URL.in.DOAJ[matching_indices], NA)
 
 
-match_bdd$issn_doaj <- ifelse(!is.na(match_bdd$issn_doaj), 1, 0)
-match_bdd$issn_openalex <- ifelse(!is.na(match_bdd$issn_openalex), 1, 0)
-match_bdd$issn_sherpa <- ifelse(!is.na(match_bdd$issn_sherpa), 1, 0)
+#####################################################################################
 
-match_bdd <- match_bdd %>%
-  select(-issn)
+#####################################################################################
 
-names(match_bdd) <- c("DOAJ", "OpenAlex", "Sherpa Romeo")
+# Trouver les indices des correspondances pour issn1 (en gérant le cas où issn1 est NA)
+matching_indices_issn1 <- ifelse(!is.na(match_bdd$issn_sherpa), match(match_bdd$issn_sherpa, df_all_sherpa$issn1), NA)
+
+# Trouver les indices des correspondances pour issn2 (en gérant le cas où issn2 est NA)
+matching_indices_issn2 <- ifelse(!is.na(match_bdd$issn_sherpa), match(match_bdd$issn_sherpa, df_all_sherpa$issn2), NA)
+
+# Combiner les résultats en utilisant l'opérateur |
+matching_indices <- ifelse(!is.na(matching_indices_issn1), matching_indices_issn1, matching_indices_issn2)
+
+# Ajouter une colonne id_sherpa_result à match_bdd
+match_bdd$id_sherpa_result <- ifelse(!is.na(matching_indices), df_all_sherpa$all_sherpa[matching_indices], NA)
+
+
+#####################################################################################
+#####################################################################################
+# Trouver les indices des correspondances
+matching_indices <- ifelse(!is.na(match_bdd$issn_openalex), match(match_bdd$issn_openalex, journals_openalex$issn), NA)
+
+# Ajouter une colonne id_openalex_result à match_bdd
+match_bdd$id_openalex_result <- ifelse(!is.na(matching_indices), journals_openalex$id[matching_indices], NA)
+
+#####################################################################################
+#####################################################################################
+match_bdd2 <- match_bdd %>%
+  select(starts_with("id_")) %>%
+  unique()
+
+# Transformer en 0/1
+match_bdd2$id_doaj_result <- ifelse(!is.na(match_bdd2$id_doaj_result), 1, 0)
+match_bdd2$id_openalex_result <- ifelse(!is.na(match_bdd2$id_openalex_result), 1, 0)
+match_bdd2$id_sherpa_result <- ifelse(!is.na(match_bdd2$id_sherpa_result), 1, 0)
+
+names(match_bdd2) <- c("DOAJ", "OpenAlex", "Sherpa Romeo")
 
 # install.packages("UpSetR")
-# library(UpSetR)
+library(UpSetR)
+library(grid)
+
 
 # Créer le graphique UpSet
-upset(match_bdd, order.by = "freq", nsets = 3, matrix.color = "#DC267F", 
+upset_plot <- upset(match_bdd2, order.by = "freq", nsets = 3, matrix.color = "#DC267F", 
       main.bar.color = "#648FFF", sets.bar.color = "#FE6100",
-      point.size = 3.5)
+      point.size = 6,
+      text.scale = 2,  # Ajuster la taille des chiffres
+      )
 
+# Ajouter des étiquettes aux barres horizontales
+for (i in seq_along(upset_plot$bar.down$vps)) {
+  grid.text(
+    label = rowSums(match_bdd[, upset_plot$bar.down$labels[[i]]]),
+    x = unit(1, "npc") - unit(0.5, "cm"),
+    y = upset_plot$bar.down$vps[[i]]$y,
+    just = "left",
+    hjust = 1,
+    vjust = 0.5,
+    gp = gpar(fontsize = 12, fontface = "bold", col = "black")
+  )
+}
 
-# Créer le graphique UpSet : échelle log10
-upset(match_bdd, order.by = "freq", nsets = 3, matrix.color = "#DC267F", 
-      main.bar.color = "#648FFF", sets.bar.color = "#FE6100",
-      scale.sets = "log10", scale.intersections = "log10")
+# Afficher le graphique
+print(upset_plot)
+
 
