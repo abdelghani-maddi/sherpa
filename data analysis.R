@@ -12,7 +12,11 @@ journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx"
 
 ##
 journals_openalex <- read_excel("D:/bdd pubpeer/journals_openalex.xlsx")
+journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
+
 journals_doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
+journals_doaj <- read.csv("~/Documents/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
+
 ##
 
 
@@ -170,6 +174,8 @@ df_all_sherpa <- separate(df_all_sherpa, issn, into = c("issn1", "issn2"), sep =
 
 # DOAJ
 doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
+doaj <- read.csv("~/Documents/sherpa_romeo_juliette/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
+
 doaj_e_issn <- data.frame(c(doaj$Journal.ISSN..print.version., doaj$Journal.EISSN..online.version.))
 names(doaj_e_issn) <- "issn"
 doaj_e_issn <- doaj_e_issn %>%
@@ -196,6 +202,30 @@ sherpa_e_issn <- sherpa_e_issn %>% mutate(issn_sherpa = issn)
 
 
 # Utiliser full_join pour obtenir toutes les lignes
-result_full_outer <- full_join(doaj_e_issn, openalex_e_issn, by = "issn") %>%
+match_bdd <- full_join(doaj_e_issn, openalex_e_issn, by = "issn") %>%
   full_join(., sherpa_e_issn, by = "issn") 
+
+
+match_bdd$issn_doaj <- ifelse(!is.na(match_bdd$issn_doaj), 1, 0)
+match_bdd$issn_openalex <- ifelse(!is.na(match_bdd$issn_openalex), 1, 0)
+match_bdd$issn_sherpa <- ifelse(!is.na(match_bdd$issn_sherpa), 1, 0)
+
+match_bdd <- match_bdd %>%
+  select(-issn)
+
+names(match_bdd) <- c("DOAJ", "OpenAlex", "Sherpa Romeo")
+
+# install.packages("UpSetR")
+# library(UpSetR)
+
+# Créer le graphique UpSet
+upset(match_bdd, order.by = "freq", nsets = 3, matrix.color = "#DC267F", 
+      main.bar.color = "#648FFF", sets.bar.color = "#FE6100",
+      point.size = 3.5)
+
+
+# Créer le graphique UpSet : échelle log10
+upset(match_bdd, order.by = "freq", nsets = 3, matrix.color = "#DC267F", 
+      main.bar.color = "#648FFF", sets.bar.color = "#FE6100",
+      scale.sets = "log10", scale.intersections = "log10")
 
