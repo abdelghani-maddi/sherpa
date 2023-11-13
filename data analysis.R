@@ -174,21 +174,15 @@ doaj_e_issn <- data.frame(c(doaj$Journal.ISSN..print.version., doaj$Journal.EISS
 names(doaj_e_issn) <- "issn"
 doaj_e_issn <- doaj_e_issn %>%
   filter(issn != "") %>%
-  unique() %>% 
-  left_join(., df_doaj %>% select(issn1, id_doaj), by = c("issn" = "issn1")) %>%
-  left_join(., df_doaj %>% select(issn2, id_doaj), by = c("issn" = "issn2")) %>%
-  mutate(id_doaj_sherpa = coalesce(id_doaj.x, id_doaj.y)) %>%
-  select(-id_doaj.x, -id_doaj.y)
-
+  unique() %>%
+  mutate(issn_doaj = issn)
 
 # OpenAlex
 openalex_e_issn <- journals_openalex %>%
   select(issn) %>%
   unique() %>%
-  left_join(., df_openalex %>% select(issn1, id_openalex), by = c("issn" = "issn1")) %>%
-  left_join(., df_openalex %>% select(issn2, id_openalex), by = c("issn" = "issn2")) %>%
-  mutate(id_openalex_sherpa = coalesce(id_openalex.x, id_openalex.y)) %>%
-  select(-id_openalex.x, -id_openalex.y)
+  mutate(issn_openalex = issn)
+
 
 
 # Sherpa Romeo
@@ -198,18 +192,10 @@ sherpa_e_issn <- data.frame(c(sherpa_e_issn$issn1, sherpa_e_issn$issn2)) %>%
   unique()
 names(sherpa_e_issn) <- "issn"
 
-sherpa_e_issn <- sherpa_e_issn %>%
-  left_join(., df_all_sherpa %>% select(issn1, all_sherpa), by = c("issn" = "issn1")) %>%
-  left_join(., df_all_sherpa %>% select(issn2, all_sherpa), by = c("issn" = "issn2")) %>%
-  mutate(id_sherpa_sherpa = coalesce(all_sherpa.x, all_sherpa.y)) %>%
-  select(-all_sherpa.x, -all_sherpa.y)
-
+sherpa_e_issn <- sherpa_e_issn %>% mutate(issn_sherpa = issn) 
 
 
 # Utiliser full_join pour obtenir toutes les lignes
 result_full_outer <- full_join(doaj_e_issn, openalex_e_issn, by = "issn") %>%
-  full_join(., sherpa_e_issn, by = "issn") %>%
-  select(-issn) %>%
-  unique
-
+  full_join(., sherpa_e_issn, by = "issn") 
 
