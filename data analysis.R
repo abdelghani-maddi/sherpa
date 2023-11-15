@@ -12,7 +12,7 @@ journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx"
 
 ##
 journals_openalex <- read_excel("D:/bdd pubpeer/journals_openalex.xlsx")
-journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
+
 
 journals_doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
 journals_doaj <- read.csv("~/Documents/sherpa_romeo_juliette/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
@@ -251,15 +251,43 @@ match_bdd2 <- match_bdd %>%
   unique()
 
 
-
-filtered_match_bdd2 <- match_bdd2 %>%
+filtered_match_bdd <- match_bdd2 %>%
   distinct(id_doaj_result, id_sherpa_result, id_openalex_result, .keep_all = TRUE)
 
-filtered_match_bdd2 <- match_bdd2 %>%
-  gather(column, value, id_doaj_result:id_openalex_result) %>%
-  group_by(column, value) %>%
-  filter(all(is.na(value)) | all(is.na(select(., -column)))) %>%
-  spread(column, value)
+
+add_non_na_duplicate_count_columns <- function(dataframe, cols_to_check) {
+  # Vérifier si le dataframe est vide
+  if (nrow(dataframe) == 0) {
+    warning("Le dataframe est vide.")
+    return(dataframe)
+  }
+  
+  # Initialiser une liste pour stocker les noms des nouvelles colonnes
+  new_cols <- paste(cols_to_check, "_non_na_duplicate_count", sep = "_")
+  
+  # Ajouter les colonnes pour le nombre d'occurrences en dehors des NA
+  dataframe[new_cols] <- lapply(dataframe[cols_to_check], function(col) {
+    duplicated_count <- duplicated(col) + duplicated(col, fromLast = TRUE)
+    duplicated_count[duplicated_count > 1] <- duplicated_count[duplicated_count > 1] + 1
+    duplicated_count[is.na(col)] <- NA
+    return(duplicated_count)
+  })
+  
+  return(dataframe)
+}
+
+# Colonnes à considérer pour les doublons
+cols_to_check <- c("id_doaj_result", "id_sherpa_result", "id_openalex_result")
+
+# Exemple d'utilisation
+filtered_match_bdd <- add_non_na_duplicate_count_columns(filtered_match_bdd, cols_to_check)
+
+
+
+
+
+
+
 
 
 # Transformer en 0/1
