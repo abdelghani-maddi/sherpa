@@ -5,7 +5,10 @@ library(httr)
 library(jsonlite)
 library(readxl)
 library(tidyverse)
-library(questionr)  
+library(questionr)
+library(openxlsx2)
+library(openxlsx)
+
 
 ## Données Revues : fichier avec 253222 lignes contenant des ISSN/EISSN de revues extrait à partir de OpenAlex. Soit 186347 supports (y compris revues) distincts.
 journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx")
@@ -167,6 +170,7 @@ df_all_sherpa <- data.frame(setNames(concatenated_data, fields))
 df_all_sherpa <- separate(df_all_sherpa, issn, into = c("issn1", "issn2"), sep = " - ") %>%
   mutate(all_sherpa = 1:length(df_all_sherpa$additional_oa_fee))
 
+write.xlsx(df_all_sherpa, "D:/Sherpa/df_all_sherpa.xlsx")
 
 ##########################
 # Les ISSN DES TROIS BASES
