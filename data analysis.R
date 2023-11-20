@@ -180,35 +180,48 @@ write.xlsx(df_all_sherpa, "D:/Sherpa/df_all_sherpa.xlsx")
 doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
 doaj <- read.csv("~/Documents/sherpa_romeo_juliette/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
 
-doaj_e_issn <- data.frame(c(doaj$Journal.ISSN..print.version., doaj$Journal.EISSN..online.version.))
-names(doaj_e_issn) <- "issn"
-doaj_e_issn <- doaj_e_issn %>%
-  filter(issn != "") %>%
-  unique() %>%
-  mutate(issn_doaj = issn)
+doaj_e_issn <- data.frame(doaj$Journal.ISSN..print.version., doaj$Journal.EISSN..online.version.) %>%
+  mutate_all(na_if, "")
+
+colnames(doaj_e_issn)[colnames(doaj_e_issn) == "doaj.Journal.ISSN..print.version."] <- "issn"
+colnames(doaj_e_issn)[colnames(doaj_e_issn) == "doaj.Journal.EISSN..online.version."] <- "eissn"
+
+doaj_e_issn$combined_issn <- paste0(doaj_e_issn$issn, " | " , doaj_e_issn$eissn)
+
 
 # OpenAlex
 openalex_e_issn <- journals_openalex %>%
-  select(issn) %>%
-  unique() %>%
-  mutate(issn_openalex = issn)
-
+  filter(!is.na(issn)) %>%
+  select(id, issn) %>%
+  group_by(id) %>%
+  summarize(combined_issn = paste(issn, collapse = " | "))
 
 
 # Sherpa Romeo
 sherpa_e_issn <- df_all_sherpa %>%
   select(issn1, issn2)
-sherpa_e_issn <- data.frame(c(sherpa_e_issn$issn1, sherpa_e_issn$issn2)) %>%
-  unique()
-names(sherpa_e_issn) <- "issn"
 
-sherpa_e_issn <- sherpa_e_issn %>% mutate(issn_sherpa = issn) 
+sherpa_e_issn$combined_issn <- paste0(sherpa_e_issn$issn1, " | " , sherpa_e_issn$issn2)
 
 
-# Utiliser full_join pour obtenir toutes les lignes
-match_bdd <- full_join(doaj_e_issn, openalex_e_issn, by = "issn") %>%
-  full_join(., sherpa_e_issn, by = "issn") %>%
-  unique()
+# Full join avec correspondance partielle (en excluant les NA)
+result <- full_join(
+  doaj_e_issn %>% mutate(match_part = str_extract_all(combined_issn, "\\w{4}-\\w{4}")),
+  sherpa_e_issn %>% mutate(match_part = str_extract_all(combined_issn, "\\w{4}-\\w{4}")),
+  by = c("match_part")
+) %>%
+  filter(!is.na(match_part))
+
+# Full join avec correspondance partielle (en excluant les NA)
+result_extended <- full_join(
+  result,
+  openalex_e_issn %>% mutate(match_part = str_extract_all(combined_issn, "\\d{4}-\\d{4}")),
+  by = c("match_part")
+) %>%
+  filter(!is.na(match_part)) %>%
+  select(-match_part)
+
+
 
 #####################################################################################
 #####################################################################################
