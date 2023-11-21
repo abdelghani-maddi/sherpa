@@ -186,7 +186,8 @@ doaj_e_issn <- data.frame(doaj$Journal.ISSN..print.version., doaj$Journal.EISSN.
 colnames(doaj_e_issn)[colnames(doaj_e_issn) == "doaj.Journal.ISSN..print.version."] <- "issn"
 colnames(doaj_e_issn)[colnames(doaj_e_issn) == "doaj.Journal.EISSN..online.version."] <- "eissn"
 
-doaj_e_issn$combined_issn <- paste0(doaj_e_issn$issn, " | " , doaj_e_issn$eissn)
+doaj_e_issn$combined_issn_doaj <- paste0(doaj_e_issn$issn, " | " , doaj_e_issn$eissn)
+doaj_e_issn$vec_doaj <- str_extract_all(doaj_e_issn$combined_issn_doaj, "\\w{4}-\\w{4}")
 
 
 # OpenAlex
@@ -194,129 +195,149 @@ openalex_e_issn <- journals_openalex %>%
   filter(!is.na(issn)) %>%
   select(id, issn) %>%
   group_by(id) %>%
-  summarize(combined_issn = paste(issn, collapse = " | "))
+  summarize(combined_issn_openalex = paste(issn, collapse = " | ")) %>%
+  mutate(vec_openalex = str_extract_all(combined_issn_openalex, "\\w{4}-\\w{4}"))
 
+# # Compter le nombre d'ISSN séparés par des barres verticales
+# openalex_e_issn_counts <- openalex_e_issn %>%
+#   mutate(issn_count = str_count(combined_issn, "\\w{4}-\\w{4}"))
 
 # Sherpa Romeo
 sherpa_e_issn <- df_all_sherpa %>%
   select(issn1, issn2)
 
-sherpa_e_issn$combined_issn <- paste0(sherpa_e_issn$issn1, " | " , sherpa_e_issn$issn2)
-
-
-# Full join avec correspondance partielle (en excluant les NA)
-result <- full_join(
-  doaj_e_issn %>% mutate(match_part = str_extract_all(combined_issn, "\\w{4}-\\w{4}")),
-  sherpa_e_issn %>% mutate(match_part = str_extract_all(combined_issn, "\\w{4}-\\w{4}")),
-  by = c("match_part")
-) %>%
-  filter(!is.na(match_part))
-
-# Full join avec correspondance partielle (en excluant les NA)
-result_extended <- full_join(
-  result,
-  openalex_e_issn %>% mutate(match_part = str_extract_all(combined_issn, "\\d{4}-\\d{4}")),
-  by = c("match_part")
-) %>%
-  filter(!is.na(match_part)) %>%
-  select(-match_part)
-
-
+sherpa_e_issn$combined_issn_sherpa <- paste0(sherpa_e_issn$issn1, " | " , sherpa_e_issn$issn2)
+sherpa_e_issn$vec_sherpa <- str_extract_all(sherpa_e_issn$combined_issn_sherpa, "\\w{4}-\\w{4}")
 
 #####################################################################################
 #####################################################################################
-# Trouver les indices des correspondances pour issn1 et issn2
-matching_indices_issn1 <- match(match_bdd$issn_doaj, doaj$Journal.ISSN..print.version.)
-matching_indices_issn2 <- match(match_bdd$issn_doaj, doaj$Journal.EISSN..online.version.)
-
-# Combiner les résultats en utilisant l'opérateur |
-matching_indices <- ifelse(!is.na(matching_indices_issn1), matching_indices_issn1, matching_indices_issn2)
-
-# Ajouter une colonne id_openalex_result à match_bdd
-match_bdd$id_doaj_result <- ifelse(!is.na(matching_indices), doaj$URL.in.DOAJ[matching_indices], NA)
-
-
 #####################################################################################
 
 #####################################################################################
+# Installer les packages dplyr et tidyr s'ils ne sont pas déjà installés
+# install.packages("dplyr")
+# install.packages("tidyr")
 
-# Trouver les indices des correspondances pour issn1 (en gérant le cas où issn1 est NA)
-matching_indices_issn1 <- ifelse(!is.na(match_bdd$issn_sherpa), match(match_bdd$issn_sherpa, df_all_sherpa$issn1), NA)
+# Charger les packages
+library(dplyr)
+library(tidyr)
 
-# Trouver les indices des correspondances pour issn2 (en gérant le cas où issn2 est NA)
-matching_indices_issn2 <- ifelse(!is.na(match_bdd$issn_sherpa), match(match_bdd$issn_sherpa, df_all_sherpa$issn2), NA)
+# Supposons que vous ayez les colonnes "vec_openalex", "vec_sherpa" et "vec_doaj"
+# dans les DataFrames openalex_e_issn, sherpa_e_issn et doaj_e_issn respectivement.
 
-# Combiner les résultats en utilisant l'opérateur |
-matching_indices <- ifelse(!is.na(matching_indices_issn1), matching_indices_issn1, matching_indices_issn2)
+# Utiliser tidyr pour étaler les listes
+openalex_e_issn <- openalex_e_issn %>%
+  unnest(vec_openalex) %>%
+  rename(vec = vec_openalex)
 
-# Ajouter une colonne id_sherpa_result à match_bdd
-match_bdd$id_sherpa_result <- ifelse(!is.na(matching_indices), df_all_sherpa$all_sherpa[matching_indices], NA)
+sherpa_e_issn <- sherpa_e_issn %>%
+  unnest(vec_sherpa) %>%
+  rename(vec = vec_sherpa)
+
+doaj_e_issn <- doaj_e_issn %>%
+  unnest(vec_doaj) %>%
+  rename(vec = vec_doaj)
 
 
-#####################################################################################
-#####################################################################################
-# Trouver les indices des correspondances
-matching_indices <- ifelse(!is.na(match_bdd$issn_openalex), match(match_bdd$issn_openalex, journals_openalex$issn), NA)
-
-# Ajouter une colonne id_openalex_result à match_bdd
-match_bdd$id_openalex_result <- ifelse(!is.na(matching_indices), journals_openalex$id[matching_indices], NA)
-
-#####################################################################################
-#####################################################################################
-match_bdd2 <- match_bdd %>%
-  select("issn", starts_with("id_")) %>%
+# Fusionner les DataFrames en utilisant la fonction merge de dplyr avec all = TRUE
+match_bdd <- openalex_e_issn %>%
+  full_join(sherpa_e_issn, by = "vec") %>%
+  full_join(doaj_e_issn, by = "vec") %>%
+  select(-vec) %>%
+  unique() %>%
+  select(starts_with("comb")) %>%
   unique()
 
+names(match_bdd) <- c("OpenAlex", "Sherpa", "DOAJ")
 
-filtered_match_bdd <- match_bdd2 %>%
-  distinct(id_doaj_result, id_sherpa_result, id_openalex_result, .keep_all = TRUE)
+# Ajouter une nouvelle colonne "nb_na" comptant le nombre de NA par ligne
+match_bdd$nb_na <- rowSums(is.na(match_bdd))
 
-
-add_non_na_duplicate_count_columns <- function(dataframe, cols_to_check) {
-  # Vérifier si le dataframe est vide
-  if (nrow(dataframe) == 0) {
-    warning("Le dataframe est vide.")
-    return(dataframe)
-  }
-  
-  # Initialiser une liste pour stocker les noms des nouvelles colonnes
-  new_cols <- paste(cols_to_check, "_non_na_duplicate_count", sep = "_")
-  
-  # Ajouter les colonnes pour le nombre d'occurrences en dehors des NA
-  dataframe[new_cols] <- lapply(dataframe[cols_to_check], function(col) {
-    duplicated_count <- duplicated(col) + duplicated(col, fromLast = TRUE)
-    duplicated_count[duplicated_count > 1] <- duplicated_count[duplicated_count > 1] + 1
-    duplicated_count[is.na(col)] <- NA
-    return(duplicated_count)
-  })
-  
-  return(dataframe)
-}
-
-# Colonnes à considérer pour les doublons
-cols_to_check <- c("id_doaj_result", "id_sherpa_result", "id_openalex_result")
-
-# Exemple d'utilisation
-filtered_match_bdd <- add_non_na_duplicate_count_columns(filtered_match_bdd, cols_to_check)
+# Compter le nombre de lignes par "OpenAlex"
+nb_lignes_par_openalex <- table(match_bdd$OpenAlex) %>%
+  as.data.frame()
+# Renommer les colonnes
+colnames(nb_lignes_par_openalex) <- c("OpenAlex", "Nb_lignes_openalex")
+# Compter le nombre de lignes par "doaj"
+nb_lignes_par_doaj <- table(match_bdd$DOAJ) %>%
+  as.data.frame()
+# Renommer les colonnes
+colnames(nb_lignes_par_doaj) <- c("DOAJ", "Nb_lignes_doaj")
+# Compter le nombre de lignes par "Sherpa"
+nb_lignes_par_Sherpa <- table(match_bdd$Sherpa) %>%
+  as.data.frame()
+# Renommer les colonnes
+colnames(nb_lignes_par_Sherpa) <- c("Sherpa", "Nb_lignes_Sherpa")
 
 
+# Matcher les nombres de lignes
+match_bdd <- left_join(match_bdd, nb_lignes_par_openalex, by = "OpenAlex")
+match_bdd <- left_join(match_bdd, nb_lignes_par_doaj, by = "DOAJ")
+match_bdd <- left_join(match_bdd, nb_lignes_par_Sherpa, by = "Sherpa")
+
+# Filtrer les doublons openalex
+match_bdd <- match_bdd %>%
+  filter(!(nb_na = 2 & Nb_lignes_openalex > 1 & !is.na(Nb_lignes_openalex) & is.na(Nb_lignes_doaj) & is.na(Nb_lignes_Sherpa) ))
 
 
+# Supprimer les lignes pour lesquelles nb_na = 0 (intersection des 3 bdd)
+match_bdd_na0 <- match_bdd %>%
+  filter(nb_na == 0)
+
+# Sélectionner les lignes de match_bdd où rien ne matche (aucune correspondance entre les 3 bdd)
+match_bdd_na2 <- match_bdd %>%
+  filter(nb_na == 2 & 
+           (Nb_lignes_openalex == 1 & is.na(Nb_lignes_doaj) & is.na(Nb_lignes_Sherpa)) | 
+           (Nb_lignes_doaj == 1 & is.na(Nb_lignes_openalex) & is.na(Nb_lignes_Sherpa)) | 
+           (Nb_lignes_Sherpa == 1 & is.na(Nb_lignes_doaj) & is.na(Nb_lignes_openalex))) 
+
+# Sélectionner les lignes de match_bdd où il y a une correspondance entre 2 bdd sur 3
+match_bdd_na1 <- match_bdd %>%
+  filter(nb_na == 1 & 
+           (Nb_lignes_openalex == 1 & Nb_lignes_doaj == 1 & is.na(Nb_lignes_Sherpa)) | 
+           (Nb_lignes_openalex == 1 & Nb_lignes_Sherpa == 1 & is.na(Nb_lignes_doaj)) | 
+           (Nb_lignes_doaj == 1 & Nb_lignes_Sherpa == 1 & is.na(Nb_lignes_openalex))) 
+
+# Sélectionner les lignes de match_bdd où il y a une correspondance entre 2 bdd sur 3
+match_bdd_na1_doub <- match_bdd %>%
+  filter(nb_na == 1 & 
+           (Nb_lignes_openalex > 1 & Nb_lignes_doaj == 1 & is.na(Nb_lignes_Sherpa)) | 
+           (Nb_lignes_openalex > 1 & Nb_lignes_Sherpa == 1 & is.na(Nb_lignes_doaj)) | 
+           (Nb_lignes_doaj > 1 & Nb_lignes_Sherpa == 1 & is.na(Nb_lignes_openalex))) 
+
+# Sélectionner les lignes de match_bdd où il y a une correspondance entre 2 bdd sur 3
+match_bdd_na1_doub2 <- match_bdd %>%
+  filter(nb_na == 1 & 
+           (Nb_lignes_openalex > 1 & Nb_lignes_doaj > 1 & is.na(Nb_lignes_Sherpa)) | 
+           (Nb_lignes_openalex > 1 & Nb_lignes_Sherpa > 1 & is.na(Nb_lignes_doaj)) | 
+           (Nb_lignes_doaj > 1 & Nb_lignes_Sherpa > 1 & is.na(Nb_lignes_openalex))) 
 
 
+# Faire une union des trois dataframes
+match_bdd_all <- bind_rows(match_bdd_na0, match_bdd_na1, match_bdd_na2, match_bdd_na1_doub)
 
 
+n_distinct(match_bdd_all$OpenAlex)
+n_distinct(match_bdd_all$Sherpa)
+n_distinct(match_bdd_all$DOAJ)
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
+match_bdd2 <- match_bdd_all %>%
+  select(-starts_with("n")) %>%
+  as.data.frame()
 
 # Transformer en 0/1
-match_bdd2$id_doaj_result <- ifelse(!is.na(match_bdd2$id_doaj_result), 1, 0)
-match_bdd2$id_openalex_result <- ifelse(!is.na(match_bdd2$id_openalex_result), 1, 0)
-match_bdd2$id_sherpa_result <- ifelse(!is.na(match_bdd2$id_sherpa_result), 1, 0)
+match_bdd2$OpenAlex <- ifelse(!is.na(match_bdd2$OpenAlex), 1, 0)
+match_bdd2$Sherpa <- ifelse(!is.na(match_bdd2$Sherpa), 1, 0)
+match_bdd2$DOAJ <- ifelse(!is.na(match_bdd2$DOAJ), 1, 0)
 
-names(match_bdd2) <- c("issn","DOAJ", "Sherpa Romeo", "OpenAlex")
+# tests
+sum(match_bdd2$OpenAlex)
+sum(match_bdd2$Sherpa)
+sum(match_bdd2$DOAJ)
 
-# Utiliser la fonction table pour compter le nombre de lignes par issn
-count_by_issn <- table(match_bdd2$issn) %>%
-  data.frame()
 
 # install.packages("UpSetR")
 library(UpSetR)
@@ -329,19 +350,5 @@ upset(match_bdd2, order.by = "freq", nsets = 3, matrix.color = "#DC267F",
       point.size = 6,
       text.scale = 2,  # Ajuster la taille des chiffres
       )
-
-# Ajouter des étiquettes aux barres horizontales
-for (i in seq_along(upset_plot$bar.down$vps)) {
-  grid.text(
-    label = rowSums(match_bdd[, upset_plot$bar.down$labels[[i]]]),
-    x = unit(1, "npc") - unit(0.5, "cm"),
-    y = upset_plot$bar.down$vps[[i]]$y,
-    just = "left",
-    hjust = 1,
-    vjust = 0.5,
-    gp = gpar(fontsize = 12, fontface = "bold", col = "black")
-  )
-}
-
 
 
