@@ -11,9 +11,6 @@ library(openxlsx)
 library(XML)
 library(xml2)
 
-# Installer les bibliothèques xml2 et dplyr si ce n'est pas déjà fait
-# install.packages(c("xml2", "dplyr"))
-
 # Charger les bibliothèques
 library(xml2)
 library(dplyr)
