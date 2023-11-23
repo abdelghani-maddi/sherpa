@@ -15,18 +15,28 @@ library(xml2)
 # Spécifier le chemin du fichier XML
 xml_file <- "~/Documents/sherpa_romeo_juliette/ROAD.xml"
 
-# Read the XML file using xmlTreeParse
-xml_doc <- xmlTreeParse(xml_file, useInternalNodes = TRUE)
+# Lire le fichier XML
+doc <- read_xml(xml_file)
 
-# Extract data from specific nodes
-record_nodes <- getNodeSet(xml_doc, "//record")
+# Extraire tous les éléments "record"
+record_nodes <- xml_find_all(doc, "//record")
 
-# Loop through each record node
+# Initialiser une liste pour stocker les données
+data_list <- list()
+
+# Loop à travers chaque élément record
 for (record_node in record_nodes) {
-  leader <- xpathSApply(record_node, "//leader", xmlValue)
-  controlfield_001 <- xpathSApply(record_node, "//controlfield[@tag='001']", xmlValue)
+  # Extraire les valeurs des éléments leader, controlfield, datafield
+  leader <- xml_text(xml_find_first(record_node, ".//leader"))
+  controlfields <- xml_text(xml_find_all(record_node, ".//controlfield"))
+  datafields <- xml_text(xml_find_all(record_node, ".//datafield"))
   
-  cat("Leader:", leader, "\n")
-  cat("Controlfield 001:", controlfield_001, "\n")
-  # Add more lines to print other fields as needed
+  # Combinez toutes les valeurs dans une liste pour chaque enregistrement
+  record_data <- c("leader" = leader, "controlfields" = controlfields, "datafields" = datafields)
+  
+  # Ajouter la liste à la liste principale
+  data_list <- c(data_list, list(record_data))
 }
+
+# Convertir la liste en dataframe
+df <- as.data.frame(do.call(rbind, data_list), stringsAsFactors = FALSE)
