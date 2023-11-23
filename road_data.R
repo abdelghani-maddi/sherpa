@@ -1,5 +1,10 @@
-# Analyse data sherpa romeo
+###################
+# Analyse data ROAD
+###################
+
+# Nettoyage
 rm(list=ls())
+
 # Charger les bibliothèques
 library(httr)
 library(jsonlite)
@@ -31,7 +36,7 @@ for (record_node in record_nodes) {
   controlfields <- xml_text(xml_find_all(record_node, ".//controlfield"))
   datafields <- xml_text(xml_find_all(record_node, ".//datafield"))
   
-  # Combinez toutes les valeurs dans une liste pour chaque enregistrement
+  # Combiner toutes les valeurs dans une liste pour chaque enregistrement
   record_data <- c("leader" = leader, "controlfields" = controlfields, "datafields" = datafields)
   
   # Ajouter la liste à la liste principale
