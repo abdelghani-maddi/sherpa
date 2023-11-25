@@ -16,6 +16,9 @@ journals_openalex <- read_excel("~/Documents/bdd pubpeer/journals_openalex.xlsx"
 ##
 journals_openalex <- read_excel("D:/bdd pubpeer/journals_openalex.xlsx")
 
+##
+# journals_openalex <- read_excel("data/journals_openalex.xlsx")
+
 
 journals_doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
 journals_doaj <- read.csv("~/Documents/sherpa_romeo_juliette/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
@@ -179,6 +182,7 @@ write.xlsx(df_all_sherpa, "D:/Sherpa/df_all_sherpa.xlsx")
 # DOAJ
 doaj <- read.csv("D:/Sherpa/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
 doaj <- read.csv("~/Documents/sherpa_romeo_juliette/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
+# doaj <- read.csv("data/journalcsv__doaj_20231110_1320_utf8.csv", sep = ",")
 
 doaj_e_issn <- data.frame(doaj$Journal.ISSN..print.version., doaj$Journal.EISSN..online.version.) %>%
   mutate_all(na_if, "")
@@ -352,4 +356,61 @@ upset(match_bdd2, order.by = "freq", nsets = 3, matrix.color = "#DC267F",
       text.scale = 2,  # Ajuster la taille des chiffres
       )
 
+# Test visualisation avec un diagramme de Venn
 
+match_bdd3 <- match_bdd2 %>%
+  rowid_to_column("ID") %>%
+  pivot_longer(c(Sherpa, OpenAlex, DOAJ)) %>%
+  filter(value != 0) %>%
+  group_by(ID) %>%
+  mutate(combi = paste0(name, collapse = "-")) %>%
+  ungroup()
+
+sommes <- match_bdd3 %>%
+  group_by(name) %>%
+  summarise(n = n()) %>%
+  pull(n)
+
+names(sommes) <- c("DOAJ", "OpenAlex", "Sherpa")
+
+intersections <- match_bdd3 %>%
+    group_by(combi) %>%
+    summarise(n = n())
+
+###############
+
+library(eulerr)
+
+i <- intersections %>%
+  pull(n)
+
+names(i) <- intersections %>%
+  pull(combi)
+
+eg <- c("A" = sommes["DOAJ"], "B" = sommes["Sherpa"], "C" = sommes["OpenAlex"],
+  "A&B" = i["Sherpa-DOAJ"], "A&C" = i["OpenAlex-DOAJ"], "B&C" = i["Sherpa-OpenAlex"],
+  "A&B&C" = i["Sherpa-OpenAlex-DOAJ"])
+
+names(eg) <- c("A", "B", "C", "A&B", "A&C", "B&C", "A&B&C")
+
+eg <- euler(eg)
+
+# svg(filename = "euler_diagram.svg", width = 10, height = 9)
+
+plot.new()
+
+#\n19,406 records ; \n27,2660 records ; \n110,200 records
+
+plot(eg, quantities = TRUE,
+     labels = list(labels = c("DOAJ", "Sherpa", "OpenAlex"),
+                   col = c("darkgreen", "darkblue", "darkorange"),
+                   cex = 1.5, font = 2), 
+     edges = list(),
+     fills = list(fill = c("lightgreen", "steelblue4", "orange"), alpha = 0.5),
+     main = "")
+
+title(main = ("Overlap between OpenAlex,\nSherpa and the DOAJ"), line = 2.5,  cex.main = 1.5, font.main = 2) #line = 2.5
+mtext("Based on data extraction made in November 2023", side = 1, line = 2, cex = 1.5, outer = T) # line = 4.7
+mtext("2023-11-25. Designed with the R package Eulerr", side = 4, cex = 1, line = 3, outer = T, adj = 1, font = 3, col = "grey")
+
+# dev.off()
