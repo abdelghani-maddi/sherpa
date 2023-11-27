@@ -7,3 +7,5 @@ data_list_doaj.rds
 data_list_all_sherpa.rds
 data_list_openalex.rds
 /data/
+road_data.xlsx
+road_data.rds
