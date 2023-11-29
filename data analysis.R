@@ -226,9 +226,6 @@ sherpa_e_issn$vec_sherpa <- str_extract_all(sherpa_e_issn$combined_issn_sherpa, 
 library(dplyr)
 library(tidyr)
 
-# Supposons que vous ayez les colonnes "vec_openalex", "vec_sherpa" et "vec_doaj"
-# dans les DataFrames openalex_e_issn, sherpa_e_issn et doaj_e_issn respectivement.
-
 # Utiliser tidyr pour étaler les listes
 openalex_e_issn <- openalex_e_issn %>%
   unnest(vec_openalex) %>%
