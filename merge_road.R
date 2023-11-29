@@ -177,3 +177,23 @@ upset(m, order.by = "freq", nsets = 7, matrix.color = "#DC267F",
 
 #####################################################
 
+disc <- df[,c(4, 5:10)]
+
+names(disc) <- c("discipline","Scopus", "WoS", "DOAJ", "Sherpa", "OpenAlex", "TopFactor")
+
+# Nombres par discipline
+sum_by_discipline <- disc %>%
+  group_by(discipline) %>%
+  summarise_all(sum)
+
+# Nombres par discipline all ROAD
+sum_by_discipline_road <- df %>%
+  select(issn, field_981_a) %>%
+  group_by(field_981_a) %>%
+  summarise(count = n())
+
+# Tout
+sum_by_discipline <- left_join(sum_by_discipline, sum_by_discipline_road, by = c("discipline" = "field_981_a"))
+
+write.xlsx(sum_by_discipline, "sum_by_discipline.xlsx")
+
