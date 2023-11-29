@@ -171,8 +171,9 @@ upset(m, order.by = "freq")
 upset(m, order.by = "freq", nsets = 7, matrix.color = "#DC267F", 
       main.bar.color = "#648FFF", sets.bar.color = "#FE6100",
       point.size = 2,
-      text.scale = 2  # Remove the trailing comma
+      text.scale = 1.5  # Remove the trailing comma
 )
+
 
 #####################################################
 
